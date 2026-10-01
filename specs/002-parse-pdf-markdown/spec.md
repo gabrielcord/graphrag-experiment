@@ -40,17 +40,17 @@ As a repository collaborator, I want the generated Markdown corpus directory and
 
 ---
 
-### User Story 3 - Document Metadata Enrichment & Fault Resilience (Priority: P3)
+### User Story 3 - Fault Resilience & Idempotent Overwrite (Priority: P3)
 
-As a downstream data consumer or indexer, I want each parsed Markdown document to include structured document metadata from the manifest (such as title, identifier, source institution, group, and source URL), and I want the parsing process to handle missing, corrupt, or unreadable PDF files gracefully without crashing the overall batch, so that metadata lineage is preserved and batch processing remains resilient.
+As an operator running the parsing pipeline, I want the system to handle missing, corrupt, or unreadable PDF files gracefully by reporting errors to standard error without crashing the overall batch, and to support clean idempotent overwrites, so that errors on individual files do not abort the processing of the remaining corpus.
 
-**Why this priority**: Preserves document provenance and metadata necessary for downstream GraphRAG indexing, while ensuring that errors on individual files do not abort the processing of the remaining corpus.
+**Why this priority**: Guarantees pipeline robustness and batch resilience, ensuring that individual bad or missing files do not halt batch operations.
 
-**Independent Test**: Run the parsing command with a manifest that contains a missing PDF file and a corrupted PDF file alongside valid PDF files. Verify that valid files are successfully parsed with metadata headers/frontmatter, errors for invalid files are reported to standard error, and the batch completes successfully.
+**Independent Test**: Run the parsing command with a manifest that contains a missing PDF file and a corrupted PDF file alongside valid PDF files. Verify that valid files are successfully parsed into clean Markdown without extraneous frontmatter, errors for invalid files are reported to standard error, and the batch completes successfully.
 
 **Acceptance Scenarios**:
 
-1. **Given** a document entry in the manifest with metadata attributes (`selection_id`, `title`, `group`, `source_id`, `url`), **When** its corresponding PDF is parsed, **Then** the resulting Markdown file contains these metadata attributes at the beginning of the file.
+1. **Given** a valid PDF in the corpus directory, **When** it is parsed, **Then** the resulting Markdown file contains strictly the extracted document content without injecting extraneous metadata.
 2. **Given** a document listed in the manifest whose corresponding PDF file is missing from the input corpus directory, **When** parsing executes, **Then** an error message is written to standard error with the document identifier, the item is recorded as failed, and parsing continues with the next item.
 3. **Given** a corrupted or unreadable PDF file in the corpus directory, **When** parsing executes, **Then** an error message is written to standard error, the failure is recorded in the summary, and the batch continues without crashing.
 4. **Given** a Markdown file that already exists in the output directory, **When** the parsing command runs again, **Then** the file is cleanly and idempotently overwritten with the latest parsed content.
@@ -76,7 +76,7 @@ As a downstream data consumer or indexer, I want each parsed Markdown document t
 - **FR-004**: System MUST parse the textual content and structural elements of each PDF document and convert them into standard Markdown representation.
 - **FR-005**: System MUST persist each converted document as `<output-dir>/<selection_id>.md`, where `--output-dir` defaults to `corpus_md/` and can be overridden via command-line argument.
 - **FR-006**: System MUST ensure that the output Markdown directory and all generated `.md` files are version-controlled in Git and explicitly NOT excluded by `.gitignore`.
-- **FR-007**: System MUST embed metadata from the manifest entry (`selection_id`, `title`, `group`, `source_id`, `url`) at the top of each generated Markdown file.
+- **FR-007**: System MUST persist strictly the extracted document Markdown content to `<output-dir>/<selection_id>.md` without injecting frontmatter or extraneous metadata headers into the document body.
 - **FR-008**: System MUST handle missing or unparseable PDF files gracefully by logging descriptive error details to standard error and continuing sequential execution for all remaining entries.
 - **FR-009**: System MUST overwrite existing Markdown files idempotently when executed multiple times.
 - **FR-010**: System MUST emit real-time status for each document processed to standard output, followed by a final completion summary indicating total documents processed, successfully parsed, and failed.

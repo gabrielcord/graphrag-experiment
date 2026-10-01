@@ -1,8 +1,8 @@
-# GraphRAG Experiment: PDF Corpus Downloader
+# GraphRAG Experiment: Pipeline de Ingestão de Corpus
 
-Ferramenta CLI em Python (3.11+) para download sequencial e cortês de documentos PDF a partir de um manifesto estruturado em YAML para um diretório local `corpus/`.
+Ferramentas de linha de comando (CLI) em Python (3.11+) para aquisição e pré-processamento de documentos jurídicos/institucionais para experimentos com GraphRAG.
 
-Projetado de acordo com a [Constituição do Projeto](.specify/memory/constitution.md): código mínimo (KISS/YAGNI), interface exclusiva via CLI, sem casos de borda especulativos e foco na proteção do servidor de origem (*polite crawling*).
+Projetado em estrita conformidade com a [Constituição do Projeto](.specify/memory/constitution.md): código mínimo (KISS/YAGNI), interface exclusiva via CLI, sem casos de borda especulativos e foco na proteção do servidor de origem (*polite crawling*).
 
 ---
 
@@ -10,101 +10,110 @@ Projetado de acordo com a [Constituição do Projeto](.specify/memory/constituti
 
 ### 1. Pré-requisitos e Instalação
 
-Certifique-se de ter o Python 3.11+ instalado. Instale a única dependência externa (`PyYAML`):
+Certifique-se de ter o Python 3.11+ instalado. Instale as dependências declaradas em `requirements.txt` (`PyYAML` e `pymupdf4llm`):
 
 ```bash
-pip install -r requirements.txt
-```
-
-Ou usando `uv` (opcional):
-```bash
-uv venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-uv pip install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ---
 
-### 2. Executando o Downloader
+### 2. Download do Corpus de PDFs (`src.download_corpus`)
+
+Faz o download sequencial e cortês dos PDFs listados em [`manifest.yml`](manifest.yml) para o diretório local `corpus/` (ignorado no Git via `.gitignore`, preservando `corpus/.gitkeep`).
 
 #### Execução Padrão (Zero Configuração)
-Basta rodar o comando abaixo sem parâmetros. Ele usará automaticamente o manifesto fixo [`manifest.yml`](manifest.yml) da raiz do projeto e salvará os PDFs na pasta [`corpus/`](corpus/):
-
 ```bash
 python3 -m src.download_corpus
 ```
 
-#### Executando com Manifesto Customizado
-Você pode passar o caminho de outro arquivo YAML diretamente como argumento posicional ou via `--manifest`:
-
-```bash
-# Como argumento posicional:
-python3 -m src.download_corpus outro_manifesto.yml
-
-# Ou via flag:
-python3 -m src.download_corpus --manifest outro_manifesto.yml
-```
-
-#### Customizando Intervalos e Pastas
-Para proteger o servidor ou alterar a pasta de destino:
-
+#### Customizando Parâmetros
 ```bash
 python3 -m src.download_corpus \
+  --manifest manifest.yml \
   --corpus-dir corpus \
   --delay 1.0 \
   --max-retries 3
 ```
 
----
-
-## ⚙️ Opções da Linha de Comando (CLI)
-
 | Parâmetro | Tipo | Padrão | Descrição |
 |---|---|---|---|
 | `manifest_path` | Posicional (opcional) | `manifest.yml` | Caminho do arquivo YAML com a lista de documentos. |
-| `--manifest` | Opção | `None` | Flag alternativa para indicar o manifesto YAML (sobrescreve o posicional). |
-| `--corpus-dir` | Opção | `corpus` | Diretório de destino onde os PDFs são salvos. |
-| `--delay` | Float | `1.0` | Intervalo em segundos entre downloads sucessivos para não sobrecarregar o servidor. |
+| `--manifest`, `-m` | Opção | `None` | Flag alternativa para o manifesto (sobrescreve o posicional). |
+| `--corpus-dir` | Opção | `corpus` | Diretório onde os arquivos PDF são armazenados. |
+| `--delay` | Float | `1.0` | Intervalo em segundos entre downloads sucessivos. |
 | `--max-retries` | Int | `3` | Tentativas com *exponential backoff* em caso de erros transitórios (429, 5xx, timeouts). |
-| `-h`, `--help` | Flag | - | Exibe a mensagem de ajuda e sai. |
+
+---
+
+### 3. Extração de PDF para Markdown (`src.parse_corpus`)
+
+Lê os PDFs baixados em `corpus/` sequencialmente (um a um) sob controle de [`manifest.yml`](manifest.yml), converte o conteúdo estrutural de cada PDF para Markdown puro usando **PyMuPDF4LLM** e persiste os arquivos em `corpus_md/`.
+
+Diferente da pasta de PDFs binários, a pasta [`corpus_md/`](corpus_md/) é **versionada no Git** (não ignorada pelo `.gitignore`), permitindo acesso direto aos textos estruturados sem reprocessar arquivos binários.
+
+#### Execução Padrão (Zero Configuração)
+```bash
+python3 -m src.parse_corpus
+```
+
+#### Customizando Parâmetros
+```bash
+python3 -m src.parse_corpus \
+  --manifest manifest.yml \
+  --corpus-dir corpus \
+  --output-dir corpus_md
+```
+
+| Parâmetro | Tipo | Padrão | Descrição |
+|---|---|---|---|
+| `manifest` | Posicional (opcional) | `manifest.yml` | Caminho do manifesto YAML de documentos. |
+| `--manifest`, `-m` | Opção | `None` | Flag alternativa para indicar o manifesto. |
+| `--corpus-dir`, `-c` | Opção | `corpus` | Diretório de origem contendo os PDFs baixados. |
+| `--output-dir`, `-o` | Opção | `corpus_md` | Diretório de destino para os arquivos Markdown (versionado no Git). |
 
 ---
 
 ## 📄 Formato do Manifesto YAML (`manifest.yml`)
 
-O manifesto é uma lista direta (sequência YAML de nível raiz) de documentos, sem necessidade de chaves envoltórias como `items:`:
+O manifesto é uma sequência YAML de nível raiz contendo os metadados canônicos dos documentos:
 
 ```yaml
 - selection_id: edital-004-2025
-  url: https://fapes.es.gov.br/media/Editais/Edital_04-2025.pdf
+  url: https://fapes.es.gov.br/media/Editais/Edital_04-2025_-_Universal_Extens%C3%A3o-1.pdf
   title: EDITAL FAPES Nº 04/2025 - UNIVERSAL DE EXTENSÃO III
   group: Editais Encerrados 2025
   source_id: editais-encerrados
 
 - selection_id: resolucao-352-2025
-  url: https://fapes.es.gov.br/media/Resolucoes/Resolucao_352.pdf
+  url: https://fapes.es.gov.br/media/Resolu%C3%A7%C3%B5es/Resolu%C3%A7%C3%A3o_CCAF_n%C2%BA_352-2025_-_Reajuste_de_Bolsas.pdf
   title: RESOLUÇÃO Nº 352 - DE 15 DE ABRIL DE 2025
   group: Resoluções CCAF
   source_id: resolucoes
 ```
 
-- Cada documento é salvo deterministicamente como `<selection_id>.pdf`.
+- Cada PDF de entrada é resolvido como `<corpus-dir>/<selection_id>.pdf`.
+- Cada arquivo Markdown de saída é salvo deterministicamente como `<output-dir>/<selection_id>.md`.
 
 ---
 
-## 🛡️ Características Principais
+## 🛡️ Princípios e Garantias do Pipeline
 
-- **Execução Estritamente Sequencial**: Processa um documento por vez, sem concorrência destrutiva contra o servidor.
-- **Pausa Educada (*Polite Delay*)**: Intervalo configurável (`--delay`, padrão 1s) entre requisições.
-- **Exponential Backoff**: Em erros de *rate limit* (HTTP 429), instabilidade do servidor (5xx) ou timeouts de rede, o sistema dobra o tempo de espera ($delay \times 2^{tentativa}$) por até 3 tentativas antes de pular o item sem travar o lote.
-- **Sobrescrita Atômica Idempotente**: Faz o download primeiro em `.tmp` e utiliza `os.replace` atômico para garantir que re-execuções não corrompam arquivos existentes.
-- **Preservação de Pasta no Git**: A pasta `corpus/` possui o marcador `.gitkeep` rastreado no Git, enquanto todos os PDFs baixados são automaticamente ignorados pelo `.gitignore`.
+1. **Separação de Armazenamento no Git**:
+   - `corpus/`: Arquivos binários PDF grandes e transitórios — ignorados no Git via `.gitignore`, com estrutura garantida por `corpus/.gitkeep`.
+   - `corpus_md/`: Arquivos de texto Markdown limpos e leves gerados por `pymupdf4llm` — **totalmente versionados e rastreados pelo Git**.
+2. **Processamento Sequencial Estrito**: Tanto o download quanto o parsing executam documento a documento, garantindo previsibilidade de recursos e observabilidade em tempo real.
+3. **Resiliência e Idempotência**:
+   - Falhas em arquivos específicos (PDF ausente ou corrompido) são reportadas em `stderr` sem abortar o processamento do lote.
+   - Re-execuções sobrescrevem arquivos existentes de forma idempotente e limpa.
 
 ---
 
 ## 🧪 Rodando os Testes
 
-Para executar a suíte completa de testes unitários (17 testes com mocks de rede, parsing e backoff):
+Para executar a suíte completa de testes automatizados:
 
 ```bash
 python3 -m unittest discover tests
