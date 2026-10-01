@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# System / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Project
+corpus/*
+!corpus/.gitkeep
+test_corpus/*
+!corpus/.gitkeep
+!test_corpus/.gitkeep

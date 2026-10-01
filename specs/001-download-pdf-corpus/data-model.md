@@ -53,6 +53,7 @@ Represents the deserialized YAML manifest file containing the sequence of docume
 #### Validation Rules
 - The root document MUST parse into a Python `list`.
 - If root is not a list (or empty list), system prints an error to stderr and exits with non-zero code.
+- Default path on disk is `./manifest.yml` at the repository root.
 
 ---
 
@@ -62,6 +63,7 @@ Runtime configuration parameters controlling sequential execution, rate limiting
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
+| `manifest_path` | Path | `manifest.yml` | Path to YAML document manifest file. |
 | `corpus_dir` | Path | `corpus` | Destination directory on disk. |
 | `polite_delay` | Float | `1.0` | Pause duration in seconds between consecutive successful downloads. |
 | `max_retries` | Integer | `3` | Maximum number of exponential backoff retry attempts for retryable errors. |
@@ -71,20 +73,28 @@ Runtime configuration parameters controlling sequential execution, rate limiting
 
 ### 4. `CorpusDirectory` & File Storage
 
-Represents the physical destination directory and binary PDF artifacts.
+Represents the physical destination directory, Git tracking marker, and binary PDF artifacts.
 
 #### Filesystem Mapping
 - **Directory Path**: `./corpus/` (relative to repository root).
-- **Artifact Path**: `./corpus/<selection_id>.pdf`.
-- **Atomic Temporary Path**: `./corpus/<selection_id>.pdf.tmp`.
+- **Directory Keeper**: `./corpus/.gitkeep` (tracked in Git to preserve folder structure across clones).
+- **Artifact Path**: `./corpus/<selection_id>.pdf` (binary file, ignored by Git).
+- **Atomic Temporary Path**: `./corpus/<selection_id>.pdf.tmp` (temporary write buffer, ignored by Git).
 
 #### Execution Lifecycle & State Transitions
 ```text
-[ Next Manifest Entry ]
-        │
-        ▼
-[ Download Attempt (attempt = 0..3) ]
-        │
+[ Initialize Directory ] ──> [ Ensure corpus/.gitkeep exists ]
+                                          │
+                                          ▼
+                              [ Ensure .gitignore contains ]
+                              [ corpus/* and !corpus/.gitkeep ]
+                                          │
+                                          ▼
+                              [ Next Manifest Entry ]
+                                          │
+                                          ▼
+                              [ Download Attempt (attempt = 0..3) ]
+                                          │
    Success?
    ├── Yes ──> [ Write to .tmp ] ──> [ os.replace to corpus/<selection_id>.pdf ]
    │                                              │
@@ -121,5 +131,9 @@ Transient summary object collected during CLI execution and printed upon complet
 ### 6. Git Ignore Management
 
 - **Target File**: `./.gitignore`
-- **Pattern**: `corpus/`
-- **Rule**: If `.gitignore` does not contain `corpus/`, append `corpus/\n` to ensure downloaded PDFs are ignored by Git.
+- **Patterns**:
+  ```gitignore
+  corpus/*
+  !corpus/.gitkeep
+  ```
+- **Rule**: Ignores all downloaded files inside `corpus/` while allowing `corpus/.gitkeep` to be tracked in Git.

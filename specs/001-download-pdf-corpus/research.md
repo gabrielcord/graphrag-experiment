@@ -43,14 +43,13 @@ This document resolves all technical decisions and dependency choices for implem
   - *Third-party retry libraries (`tenacity`, `retry`)*: Rejected because standard Python logic requires only ~15 lines and avoids unnecessary external package bloat.
   - *Parallel / asynchronous downloads*: Explicitly rejected per user requirement and server courtesy principles.
 
-### 3. CLI Argument Parsing
+### 3. CLI Argument Parsing & Default Manifest Fallback
 
-- **Decision**: Use Python standard library `argparse`.
+- **Decision**: Use Python standard library `argparse` with `nargs="?"` and `default="manifest.yml"`, plus `--manifest` flag.
 - **Rationale**:
-  - Mandated by Constitution Principle IV: *"A biblioteca padrão `argparse` DEVE (MUST) ser priorizada para tratamento de argumentos de linha de comando."*
-  - Provides native help (`--help`), positional/optional argument parsing, type conversion, and standardized exit codes with zero dependencies.
-- **Alternatives Considered**:
-  - *`click` / `typer`*: Rejected to avoid third-party dependencies and adhere directly to the project constitution.
+  - Allows zero-argument execution (`python3 -m src.download_corpus`) that seamlessly downloads the default project manifest.
+  - Positional argument and `--manifest` flag allow specifying alternative YAML files when needed.
+  - Native `--help` and standardized exit codes with zero dependencies, complying with Constitution Principle IV.
 
 ### 4. Idempotent & Atomic File Persistence
 
@@ -62,12 +61,20 @@ This document resolves all technical decisions and dependency choices for implem
 - **Alternatives Considered**:
   - *Direct in-place open(path, 'wb')*: If download fails midway, corrupts destination file.
 
-### 5. Git Ignore Automation
+### 5. Git Ignore Automation & Directory Preservation via `.gitkeep`
 
-- **Decision**: Read repository root `.gitignore` via `pathlib.Path`. Check whether `corpus/` or `corpus` appears as an exact line (ignoring whitespace). If not present, append `corpus/\n` to `.gitignore`. If `.gitignore` does not exist, create it containing `corpus/\n`.
+- **Decision**: 
+  - Automatically touch `corpus/.gitkeep` if it does not exist when initializing the directory.
+  - In `.gitignore`, use the pattern:
+    ```gitignore
+    corpus/*
+    !corpus/.gitkeep
+    ```
 - **Rationale**:
-  - Clean, idempotent, minimal code using `pathlib.Path`.
-  - Satisfies FR-003, FR-004, and User Story 2 without subprocess invocations or external git libraries.
+  - Git does not track empty directories. Placing `.gitkeep` ensures that the `corpus/` folder structure exists immediately upon cloning the repository.
+  - The pattern `corpus/*` combined with `!corpus/.gitkeep` ensures that all downloaded PDF files (and temporary `.tmp` files) remain uncommitted and untracked, while `.gitkeep` is tracked.
+- **Alternatives Considered**:
+  - Ignoring `corpus/` directly: Rejected because it prevents `.gitkeep` from being tracked by Git.
 
 ---
 

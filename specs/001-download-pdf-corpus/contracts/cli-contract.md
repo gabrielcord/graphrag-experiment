@@ -13,12 +13,12 @@ This contract formally specifies the Command Line Interface (CLI) input syntax, 
 ## Command Invocation
 
 ```bash
-python3 -m src.download_corpus <manifest_path> [--corpus-dir <dir_path>] [--delay <seconds>] [--max-retries <count>]
+python3 -m src.download_corpus [manifest_path] [--manifest <path>] [--corpus-dir <dir_path>] [--delay <seconds>] [--max-retries <count>]
 ```
 
 Alternatively:
 ```bash
-python3 src/download_corpus.py <manifest_path> [--delay <seconds>]
+python3 src/download_corpus.py [--delay <seconds>]
 ```
 
 ---
@@ -27,7 +27,8 @@ python3 src/download_corpus.py <manifest_path> [--delay <seconds>]
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `manifest_path` | Positional Argument | Yes | N/A | Path to the YAML file containing the list of documents to download. |
+| `manifest_path` | Positional Argument | No | `manifest.yml` | Path to the YAML file containing the list of documents to download. Falls back to project default `manifest.yml`. |
+| `--manifest` | Flag / Option | No | None | Alternative flag to specify path to the YAML manifest file (overrides positional argument). |
 | `--corpus-dir` | Flag / Option | No | `corpus` | Target directory where PDF files are stored. Defaults to `corpus` at repository root. |
 | `--delay` | Float Option | No | `1.0` | Polite delay in seconds between consecutive downloads to avoid harming the source website. |
 | `--max-retries` | Integer Option | No | `3` | Maximum number of exponential backoff retries when transient errors occur (429, 5xx, timeouts). |
@@ -41,7 +42,7 @@ python3 src/download_corpus.py <manifest_path> [--delay <seconds>]
 |---|---|---|
 | `0` | Success | Manifest successfully read and batch processing finished (even if individual item URLs fail after retries, the batch run succeeded). |
 | `1` | Fatal Runtime Error | Manifest file not found, unreadable, invalid YAML syntax, or root element is not a sequence/list. |
-| `2` | Usage / Syntax Error | Missing required `manifest_path` positional argument, or unrecognized CLI flags. |
+| `2` | Usage / Syntax Error | Unrecognized CLI flags or invalid parameter types. |
 
 ---
 
