@@ -1,17 +1,12 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version Change: [CONSTITUTION_VERSION] -> 1.0.0 (Initial Ratification)
-Modified Principles: None (Initial adoption)
+Version Change: 1.0.0 -> 1.1.0
+Modified Principles: None
 Added Sections:
   - Core Principles:
-    - I. Padrão de Linguagem Python (Python-First)
-    - II. Código Mínimo (KISS & YAGNI)
-    - III. Sem Casos de Borda Especulativos (Foco no Concreto)
-  - Technology Stack & Constraints
-  - Development Workflow & Quality Gates
-  - Governance
-Removed Sections: None (Replaced template placeholders)
+    - IV. Interface Exclusiva via CLI (CLI-First)
+Removed Sections: None
 Follow-up TODOs: None
 -->
 
@@ -38,9 +33,17 @@ O código NÃO DEVE (MUST NOT) tentar prever ou cobrir casos de borda, falhas te
 - Novos casos de borda só DEVEM (MUST) ser incorporados quando evidenciados por uma falha concreta, teste quebrado ou nova especificação deliberada.
 - **Racional**: Evita código morto, caminhos lógicos não testados e esforço desperdiçado em contingências hipotéticas que podem nunca se concretizar.
 
+### IV. Interface Exclusiva via CLI (CLI-First)
+Toda a interação com o sistema, execução de fluxos e experimentos DEVE (MUST) ocorrer exclusivamente via interface de linha de comando (CLI).
+- As ferramentas DEVEM (MUST) receber parâmetros e entradas via argumentos de terminal (CLI args) e/ou stdin, direcionando saídas padrão para stdout e erros/diagnósticos para stderr.
+- Não DEVEM (MUST NOT) ser construídas GUIs, servidores web ou interfaces visuais complexas, em alinhamento estrito ao princípio de código mínimo.
+- A saída padrão DEVE (MUST) ser limpa e direta, suportando formatação legível para humanos ou estruturada (ex: JSON) apenas quando houver necessidade concreta de composição.
+- **Racional**: A CLI viabiliza automação nativa em terminal, facilidade de teste, composição em scripts e elimina overhead desnecessário de interfaces gráficas.
+
 ## Technology Stack & Constraints
 
 - **Linguagem Principal**: Python 3.11+.
+- **Interface de Interação**: Exclusivamente CLI. A biblioteca padrão `argparse` DEVE (MUST) ser priorizada para tratamento de argumentos de linha de comando.
 - **Dependências Mínimas**: Dependências externas DEVEM (MUST) ser mantidas no menor número possível, priorizando sempre que viável a biblioteca padrão do Python.
 - **Arquitetura Concisa**: Preferir funções e módulos planos a hierarquias de classes profundas ("Flat is better than nested; Simple is better than complex").
 
@@ -48,7 +51,7 @@ O código NÃO DEVE (MUST NOT) tentar prever ou cobrir casos de borda, falhas te
 
 - **Delimitação Estrita de Escopo**: Nenhuma funcionalidade deve implementar comportamentos além dos especificados no ciclo atual.
 - **Testes Focados**: Casos de teste DEVEM (MUST) verificar estritamente o comportamento requerido, sem especular sobre cenários de exceção hipotéticos.
-- **Portão de Constituição (Constitution Check)**: Durante as fases de planejamento (`speckit-plan`) e implementação (`speckit-implement`), qualquer código considerado prolixo, redundante ou preventivo além do necessário DEVE (MUST) ser rejeitado e simplificado.
+- **Portão de Constituição (Constitution Check)**: Durante as fases de planejamento (`speckit-plan`) e implementação (`speckit-implement`), qualquer código considerado prolixo, redundante, voltado para interfaces além da CLI ou preventivo além do necessário DEVE (MUST) ser rejeitado e simplificado.
 
 ## Governance
 
@@ -60,4 +63,4 @@ O código NÃO DEVE (MUST NOT) tentar prever ou cobrir casos de borda, falhas te
   - MINOR: Adição de novos princípios, seções ou expansão substantiva de governança.
   - PATCH: Ajustes redacionais, correções tipográficas e clarificações não semânticas.
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-30 | **Last Amended**: 2026-09-30
+**Version**: 1.1.0 | **Ratified**: 2026-09-30 | **Last Amended**: 2026-09-30
